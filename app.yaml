@@ -1,0 +1,10 @@
+runtime:python311
+
+instance_class: F1
+
+entrypoint: gunicorn -b :$PORT app:app
+
+env_variables:
+  SECRET_KEY: 'intellicard-ai-super-secret-key-1337'
+  # Set GROQ_API_KEY here or set it in the App Engine console settings
+  # GROQ_API_KEY: 'your-groq-api-key'

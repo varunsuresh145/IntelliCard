@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Quiz Arena — IntelliCard AI{% endblock %}
+
+{% block content %}
+<div class="quiz-section" style="padding: 60px 0 100px;">
+  <div class="container" style="max-width: 760px;">
+
+    <!-- STAGE 1: MODE SELECTION -->
+    <div id="quiz-setup-stage" class="glass-card fade-in" style="padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+      <div class="section-label" style="text-align: center; justify-content: center; display: flex;">IntelliCard Quiz</div>
+      <h1 style="font-family: var(--font-disp); font-size: 32px; font-weight: 800; text-align: center; letter-spacing: -1.0px; margin-bottom: 12px;">
+        Test Your <span class="grad-text">Knowledge</span>
+      </h1>
+      <p style="color: var(--muted2); font-size: 15px; text-align: center; max-width: 480px; margin: 0 auto 36px; line-height: 1.6;">
+        Choose your study deck, select a quiz mode, and see how well you've retained the materials!
+      </p>
+
+      <form id="quiz-setup-form" onsubmit="startQuiz(event)">
+        <!-- Deck selection -->
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label" for="deck-select">Choose Study Deck</label>
+          <select id="deck-select" class="form-select" required>
+            {% for d in decks %}
+              <option value="{{ d.id }}" {% if selected_deck_id == d.id %}selected{% endif %}>{{ d.name }} ({{ d.cards_count }} cards)</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Mode selection -->
+        <div class="form-group" style="margin-bottom: 32px;">
+          <label class="form-label" style="margin-bottom: 12px;">Select Quiz Mode</label>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            <label class="mode-card" style="border: 1px solid var(--border); background: var(--glass); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; display: block;">
+              <input type="radio" name="quiz-mode" value="mcq" checked style="display: none;"/>
+              <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
+              <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text);">Multiple Choice</div>
+              <div style="font-size: 11px; color: var(--muted2); line-height: 1.3;">4 choices, 1 correct answer</div>
+            </label>
+            
+            <label class="mode-card" style="border: 1px solid var(--border); background: var(--glass); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; display: block;">
+              <input type="radio" name="quiz-mode" value="tf" style="display: none;"/>
+              <div style="font-size: 24px; margin-bottom: 8px;">⚖️</div>
+              <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text);">True / False</div>
+              <div style="font-size: 11px; color: var(--muted2); line-height: 1.3;">Decide if statement matches term</div>
+            </label>
+            
+            <label class="mode-card" style="border: 1px solid var(--border); background: var(--glass); border-radius: var(--radius); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; display: block;">
+              <input type="radio" name="quiz-mode" value="fitb" style="display: none;"/>
+              <div style="font-size: 24px; margin-bottom: 8px;">📝</div>
+              <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text);">Fill in Blanks</div>
+              <div style="font-size: 11px; color: var(--muted2); line-height: 1.3;">Type the correct answer word</div>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg glow-pulse" style="width: 100%; justify-content: center;">
+          ✦ Start Quiz Arena
+        </button>
+      </form>
+    </div>
+
+    <!-- STAGE 2: ACTIVE QUIZ (HIDDEN BY DEFAULT) -->
+    <div id="quiz-active-stage" class="glass-card fade-in" style="display: none; padding: 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); position: relative;">
+      
+      <!-- TOP META ROW -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <span class="badge badge-cyan" id="quiz-progress-badge">Question 1 of 10</span>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--amber);">
+          <span>⏱️</span> <span id="quiz-timer">20s</span>
+        </div>
+      </div>
+
+      <!-- PROGRESS TRACK -->
+      <div class="progress-track" style="margin-bottom: 32px; height: 6px; border-radius: 3px;">
+        <div class="progress-fill" id="quiz-progress-bar" style="width: 10%; height: 100%; border-radius: 3px;"></div>
+      </div>
+
+      <!-- QUESTION DISPLAY -->
+      <div style="margin-bottom: 36px; min-height: 120px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;" id="question-category">Topic Label</div>
+        <h2 style="font-size: 22px; font-weight: 700; line-height: 1.45; font-family: var(--font); color: var(--text);" id="question-text">
+          Loading question text...
+        </h2>
+      </div>
+
+      <!-- MCQ INTERFACE -->
+      <div id="mcq-choices" style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 32px;">
+        <!-- Choice buttons will be injected dynamically -->
+      </div>
+
+      <!-- TRUE/FALSE INTERFACE -->
+      <div id="tf-choices" style="display: none; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px;">
+        <button class="choice-card" onclick="submitAnswer(true)" style="height: 100px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 1px solid var(--border); background: var(--glass); border-radius: var(--radius); color: var(--text); cursor: pointer; transition: all 0.2s;">
+          True
+        </button>
+        <button class="choice-card" onclick="submitAnswer(false)" style="height: 100px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; border: 1px solid var(--border); background: var(--glass); border-radius: var(--radius); color: var(--text); cursor: pointer; transition: all 0.2s;">
+          False
+        </button>
+      </div>
+
+      <!-- FILL IN THE BLANKS INTERFACE -->
+      <div id="fitb-interface" style="display: none; margin-bottom: 32px;">
+        <div class="form-group">
+          <input type="text" id="fitb-input" class="form-input" placeholder="Type your answer here..." style="font-size: 16px; padding: 14px 18px; margin-bottom: 12px;" autocomplete="off"/>
+        </div>
+        <button class="btn btn-primary" onclick="submitFitbAnswer()" style="width: 100%; justify-content: center; font-size: 15px;">
+          Submit Answer
+        </button>
+      </div>
+
+      <!-- BOTTOM CONTROL INDICATOR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 20px;">
+        <span style="font-size: 13px; color: var(--muted2);" id="quiz-score-indicator">Current Score: 0/0</span>
+        <button class="btn btn-ghost btn-sm" onclick="quitQuiz()" style="color: var(--red); border-color: rgba(239,68,68,0.2);">Quit Quiz</button>
+      </div>
+    </div>
+
+    <!-- STAGE 3: SCORE SCREEN (HIDDEN BY DEFAULT) -->
+    <div id="quiz-score-stage" class="glass-card fade-in" style="display: none; padding: 50px 40px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); text-align: center;">
+      <div class="section-label">Result Card</div>
+      
+      <!-- SCORE WHEEL ANIMATION -->
+      <div style="position: relative; width: 140px; height: 140px; margin: 30px auto 24px;">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
+          <circle id="score-circle-fill" cx="70" cy="70" r="60" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-dasharray="376.8" stroke-dashoffset="376.8" transform="rotate(-90 70 70)" style="transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);"></circle>
+        </svg>
+        <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <span id="score-percentage" style="font-family: var(--font-disp); font-size: 32px; font-weight: 800;">0%</span>
+          <span id="score-raw" style="font-size: 13px; color: var(--muted2); font-weight: 600;">0 / 10</span>
+        </div>
+      </div>
+
+      <h2 style="font-family: var(--font-disp); font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;" id="score-headline">Outstanding Effort!</h2>
+      <p style="color: var(--muted2); font-size: 14px; max-width: 400px; margin: 0 auto 36px; line-height: 1.5;" id="score-subline">
+        You've completed the quiz deck. Check out the statistics and continue studying to reinforce weak spots.
+      </p>
+
+      <!-- WRONG ANSWERS REVIEW PANEL -->
+      <div id="quiz-review-panel" style="display: none; text-align: left; margin-bottom: 40px; background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px;">Review incorrect answers:</h4>
+        <div id="quiz-review-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 200px; overflow-y: auto; padding-right: 8px;">
+          <!-- Item list injected dynamically -->
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button onclick="restartQuizArena()" class="btn btn-primary glow-pulse" style="flex: 1; min-width: 140px; justify-content: center;">Try Again</button>
+        <a href="/dashboard" class="btn btn-ghost" style="flex: 1; min-width: 140px; justify-content: center;">To Dashboard →</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+/* CSS class additions for quiz card selections */
+.mode-card input[type="radio"]:checked + div + div + div { color: var(--text) !important; }
+.mode-card:hover {
+  border-color: rgba(0,212,255,0.3) !important;
+  background: var(--glass2) !important;
+  transform: translateY(-2px);
+}
+.mode-card.selected {
+  border-color: var(--cyan) !important;
+  background: var(--cyan-dim) !important;
+  box-shadow: 0 0 16px rgba(0,212,255,0.15);
+}
+
+.choice-card {
+  width: 100%; text-align: left;
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 20px;
+  color: var(--text2); font-size: 15px; font-weight: 500;
+  transition: all 0.2s; cursor: pointer; outline: none;
+  display: flex; align-items: center; gap: 12px;
+}
+.choice-card:hover {
+  background: var(--glass2); border-color: rgba(0,212,255,0.25);
+  color: var(--text); transform: translateX(3px);
+}
+.choice-card.selected {
+  border-color: var(--cyan); background: var(--cyan-dim); color: var(--cyan);
+}
+.choice-card.correct {
+  border-color: var(--green) !important; background: rgba(34,197,94,0.12) !important; color: var(--green) !important;
+}
+.choice-card.incorrect {
+  border-color: var(--red) !important; background: rgba(239,68,68,0.12) !important; color: var(--red) !important;
+}
+.choice-letter {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--glass2); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--muted2); flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.choice-card:hover .choice-letter { background: var(--glass3); color: var(--text); border-color: rgba(0,212,255,0.2); }
+.choice-card.selected .choice-letter { background: var(--cyan); color: var(--bg); border-color: var(--cyan); }
+.choice-card.correct .choice-letter { background: var(--green); color: #fff; border-color: var(--green); }
+.choice-card.incorrect .choice-letter { background: var(--red); color: #fff; border-color: var(--red); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load decks mapping into JS
+const DECK_CARDS_MAP = {};
+{% for d in decks %}
+  DECK_CARDS_MAP[{{ d.id }}] = [];
+{% endfor %}
+</script>
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+{% endblock %}

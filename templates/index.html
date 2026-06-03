@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}IntelliCard AI — Turn Documents Into Flashcards{% endblock %}
+
+{% block content %}
+<!-- Interactive Particle Canvas (Landing Page Specific) -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- ─── HERO SECTION ─── -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-grid-split">
+      
+      <!-- Left side: content -->
+      <div class="hero-text-side">
+        <div class="hero-badge fade-in">
+          <span class="hero-badge-dot"></span>
+          AI-Powered Learning Platform · Groq + PyMuPDF
+        </div>
+        
+        <h1 class="hero-headline fade-up delay-1">
+          <span>Transform Any Document</span>
+          <span class="grad-text">Into Smart Flashcards</span>
+        </h1>
+        
+        <p class="hero-sub fade-up delay-2">
+          Upload PDFs, DOCX files, images, or plain text. Our 4-level AI segmentation engine extracts topics, generates intelligent flashcards, quizzes, and tracks your progress automatically.
+        </p>
+        
+        <div class="hero-btns fade-up delay-3">
+          {% if current_user.is_authenticated %}
+            <a href="/dashboard" class="btn btn-primary btn-lg glow-pulse">✦ Open Dashboard</a>
+            <a href="#upload-card-target" class="btn btn-ghost btn-lg">Upload Document →</a>
+          {% else %}
+            <a href="/signup" class="btn btn-primary btn-lg glow-pulse">✦ Start Free Now</a>
+            <a href="/login"  class="btn btn-ghost btn-lg">Sign In →</a>
+          {% endif %}
+        </div>
+        
+
+      </div>
+      
+      <!-- Right side: interactive visual preview widget -->
+      <div class="hero-visual-side fade-in delay-3">
+        <div class="preview-glow-ring"></div>
+        <div class="preview-widget-container">
+          <div class="preview-card-frame">
+            <div class="preview-card-inner" id="hero-preview-card" onclick="flipHeroCard()">
+              
+              <!-- Front Face -->
+              <div class="preview-card-face preview-card-front">
+                <div class="preview-card-header">
+                  <span class="preview-card-badge">Concept Recall</span>
+                  <span style="font-size:16px;">🧠</span>
+                </div>
+                <div class="preview-card-body">
+                  <h3 class="preview-card-question" id="hero-card-question">What is the main advantage of Groq Llama-3 API?</h3>
+                </div>
+                <div class="preview-card-footer">
+                  <span>Topic: AI Technology</span>
+                  <span>Click to flip</span>
+                </div>
+              </div>
+              
+              <!-- Back Face -->
+              <div class="preview-card-face preview-card-back">
+                <div class="preview-card-header">
+                  <span class="preview-card-badge">Explanation</span>
+                  <span style="font-size:16px;">💡</span>
+                </div>
+                <div class="preview-card-body">
+                  <p class="preview-card-answer" id="hero-card-answer">It offers ultra-fast inference speeds, allowing educational materials to be processed and generated in real-time.</p>
+                </div>
+                <div class="preview-card-footer">
+                  <span>Difficulty: Medium</span>
+                  <span>Click to flip</span>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS (VISUAL WORKFLOW) ─── -->
+<section class="steps-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:56px">
+      <div class="section-label" style="justify-content:center;display:flex">Workflow</div>
+      <h2 style="font-family:var(--font-disp);font-size:32px;font-weight:800;letter-spacing:-1px">
+        Four Steps to <span class="grad-text">Mastery</span>
+      </h2>
+    </div>
+    
+    <div class="steps-grid">
+      <!-- Step 1 -->
+      <div class="step-card glass-card hover-lift fade-up">
+        <div class="step-number">1</div>
+        <h3 class="step-title">Upload File</h3>
+        <p class="step-desc">Drop your PDF, DOCX, TXT, or scan images of notes directly into the app.</p>
+      </div>
+      <!-- Step 2 -->
+      <div class="step-card glass-card hover-lift fade-up delay-1">
+        <div class="step-number">2</div>
+        <h3 class="step-title">AI Segment</h3>
+        <p class="step-desc">Our 4-level engine segments text using font size, bold lines, or page fallback.</p>
+      </div>
+      <!-- Step 3 -->
+      <div class="step-card glass-card hover-lift fade-up delay-2">
+        <div class="step-number">3</div>
+        <h3 class="step-title">Study Flashcards</h3>
+        <p class="step-desc">Review beautiful auto-generated cards with helpful hints and coding examples.</p>
+      </div>
+      <!-- Step 4 -->
+      <div class="step-card glass-card hover-lift fade-up delay-3">
+        <div class="step-number">4</div>
+        <h3 class="step-title">Test Progress</h3>
+        <p class="step-desc">Practice with custom MCQ or Fill-in-the-blank quizzes to track weak subjects.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── UPLOAD ZONE ─── -->
+<section class="upload-section" id="upload-card-target">
+  <div class="container">
+    <div class="upload-card glass-card fade-up">
+      <div class="upload-card-header">
+        <div>
+          <div class="section-label">Smart Upload</div>
+          <h2 style="font-family:var(--font-disp);font-size:24px;font-weight:800;letter-spacing:-0.5px">Upload Your Documents</h2>
+        </div>
+        <div class="badge badge-cyan">AI OCR Enabled</div>
+      </div>
+
+      <!-- Drop zone -->
+      <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-zone-inner">
+            <div class="drop-icon-ring" id="drop-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan)">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="drop-title" id="drop-title">Drop your file here, or <span style="color:var(--cyan);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</span></div>
+            <div class="drop-sub" id="drop-sub">AI will auto-segment topics and generate flashcards instantly</div>
+            <div class="file-type-badges">
+              <span class="badge badge-glass">PDF</span>
+              <span class="badge badge-glass">DOCX</span>
+              <span class="badge badge-glass">TXT</span>
+              <span class="badge badge-glass">PNG</span>
+              <span class="badge badge-glass">JPG</span>
+            </div>
+            <input type="file" id="file-input" name="file" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" style="display:none" onchange="handleFileSelect(this)"/>
+          </div>
+
+          <!-- Progress (hidden initially) -->
+          <div id="upload-progress" style="display:none;width:100%;max-width:400px;margin-top:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span id="progress-label" style="font-size:14px;color:var(--muted2);font-weight:500">Processing file...</span>
+              <span id="progress-pct" style="font-size:14px;font-weight:700;color:var(--cyan)">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-bar" style="width:0%"></div>
+            </div>
+            <div style="margin-top:16px;display:flex;justify-content:center">
+              <div style="font-size: 13px; color: var(--muted2);">Processing may take 10-15 seconds for scanned PDFs</div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Upload Options Row -->
+      <div class="upload-options">
+        <div class="upload-opt">
+          <div class="opt-icon-box" style="background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(59,130,246,0.15));border-color:rgba(0,212,255,0.2)">🧠</div>
+          <div>
+            <div class="opt-name">4-Level Detection</div>
+            <div class="opt-desc">Font hierarchies, bold headings, OCR fallbacks, or page-by-page chunking.</div>
+          </div>
+        </div>
+        <div class="upload-opt">
+          <div class="opt-icon-box" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(236,72,153,0.15));border-color:rgba(168,85,247,0.2)">🎯</div>
+          <div>
+            <div class="opt-name">Smart Quizzes</div>
+            <div class="opt-desc">Generates study sessions: MCQ, True/False, Fill in blanks with timed counters.</div>
+          </div>
+        </div>
+        <div class="upload-opt">
+          <div class="opt-icon-box" style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(0,212,255,0.15));border-color:rgba(34,197,94,0.2)">📊</div>
+          <div>
+            <div class="opt-name">Mastery Metrics</div>
+            <div class="opt-desc">Highlights critical topics and tracks learning progress dynamically.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES GRID ─── -->
+<section class="features-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:52px">
+      <div class="section-label" style="justify-content:center;display:flex">Why IntelliCard</div>
+      <h2 style="font-family:var(--font-disp);font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-1px;margin-top:8px">
+        Everything you need to <span class="grad-text">study smarter</span>
+      </h2>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card glass-card hover-lift fade-up neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(59,130,246,0.1))">🔍</div>
+        <h3 class="feature-title">Smart Segmentation</h3>
+        <p class="feature-desc">4-level fallback: font-size detection → bold text → AI topic extraction → page-by-page chunking. Works on any document.</p>
+        <div class="feature-levels">
+          <span class="level-badge">L1: Font Size</span>
+          <span class="level-badge">L2: Bold Text</span>
+          <span class="level-badge">L3: AI Topics</span>
+          <span class="level-badge">L4: Page Split</span>
+        </div>
+      </div>
+
+      <div class="feature-card glass-card hover-lift fade-up delay-1 neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(236,72,153,0.1))">⚡</div>
+        <h3 class="feature-title">Instant Generation</h3>
+        <p class="feature-desc">Powered by Groq's ultra-fast inference. Generate hundreds of flashcards with questions, answers, hints, examples, and difficulty levels in seconds.</p>
+      </div>
+
+      <div class="feature-card glass-card hover-lift fade-up delay-2 neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(0,212,255,0.1))">🧩</div>
+        <h3 class="feature-title">3-Mode Quiz Engine</h3>
+        <p class="feature-desc">MCQ with wrong-answer generation, True/False with reasoning, Fill-in-the-blank. Timed quizzes with animated score reveal.</p>
+      </div>
+
+      <div class="feature-card glass-card hover-lift fade-up delay-3 neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(249,115,22,0.1))">📈</div>
+        <h3 class="feature-title">Adaptive Learning</h3>
+        <p class="feature-desc">Tracks accuracy by topic, identifies weak areas, and generates personalized recommendations. Your study plan improves automatically.</p>
+      </div>
+
+      <div class="feature-card glass-card hover-lift fade-up delay-4 neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(168,85,247,0.1))">🔬</div>
+        <h3 class="feature-title">OCR Support</h3>
+        <p class="feature-desc">Upload scanned PDFs or photos of notes. pytesseract extracts text from images so even handwritten notes become flashcard-ready.</p>
+      </div>
+
+      <div class="feature-card glass-card hover-lift fade-up delay-5 neon-border">
+        <div class="feature-icon" style="background:linear-gradient(135deg,rgba(236,72,153,0.15),rgba(239,68,68,0.1))">📤</div>
+        <h3 class="feature-title">Export Anywhere</h3>
+        <p class="feature-desc">Export your entire deck as a formatted PDF or raw JSON. Share with classmates, import into Anki, or archive for later.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

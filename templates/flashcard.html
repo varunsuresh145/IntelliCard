@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Study Flashcards — IntelliCard AI{% endblock %}
+
+{% block content %}
+<div class="fc-page">
+  <div class="container">
+
+    <!-- TOP BAR -->
+    <div class="fc-topbar fade-up">
+      <div>
+        <div class="section-label">Your Flashcards</div>
+        <h1 class="section-title"><span class="grad">{{ deck_name or 'Study Deck' }}</span></h1>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="pill-group" id="diff-filter">
+          <button class="pill active" onclick="filterCards('all',this)">All <span class="count-chip">{{ cards|length }}</span></button>
+          <button class="pill" onclick="filterCards('Easy',this)">Easy</button>
+          <button class="pill" onclick="filterCards('Medium',this)">Medium</button>
+          <button class="pill" onclick="filterCards('Hard',this)">Hard</button>
+        </div>
+        <a href="/quiz?deck={{ deck_id }}" class="btn btn-primary btn-sm">Take Quiz →</a>
+        <a href="/export/pdf/{{ deck_id }}" class="btn btn-ghost btn-sm">Export PDF</a>
+      </div>
+    </div>
+
+    {% if cards %}
+    <!-- PROGRESS BAR -->
+    <div style="margin-bottom:32px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;color:var(--muted2)">
+        <span>Progress</span>
+        <span id="progress-text">Card <span id="cur-num">1</span> of <span id="total-num">{{ cards|length }}</span></span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="fc-progress" style="width:{{ (1/cards|length * 100)|round }}%"></div>
+      </div>
+    </div>
+
+    <!-- CARD STAGE -->
+    <div class="fc-stage fade-up delay-1">
+      <div class="card-stack">
+        <div class="flashcard-wrapper" id="fc-wrapper">
+          <div class="flashcard-inner" id="flashcard-inner">
+
+            <!-- FRONT FACE -->
+            <div class="card-face card-front">
+              <div class="diff-chip" id="fc-diff">Medium</div>
+              <div class="topic-chip" id="fc-topic">{{ cards[0].topic if cards else '' }}</div>
+              <div class="fc-tag fc-tag-q">✦ Question</div>
+              <div class="fc-question" id="fc-question">{{ cards[0].question if cards else '' }}</div>
+              <div class="fc-hint" id="fc-hint">
+                <span style="color:var(--amber)">💡</span>
+                {{ cards[0].hint if cards else '' }}
+              </div>
+              <div class="fc-flip-cue">Click to reveal answer</div>
+            </div>
+
+            <!-- BACK FACE -->
+            <div class="card-face card-back">
+              <div class="fc-tag fc-tag-a">◈ Answer</div>
+              <div class="fc-answer" id="fc-answer">{{ cards[0].answer if cards else '' }}</div>
+              {% if cards and cards[0].example %}
+              <div class="fc-example" id="fc-example">{{ cards[0].example }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- KEYBOARD HINT -->
+      <div class="fc-kbd-hint">
+        <kbd>Space</kbd> flip &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>K</kbd> know it &nbsp;·&nbsp; <kbd>R</kbd> review
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="fc-controls">
+        <button class="ctrl-btn" id="prev-btn" onclick="prevCard()" title="Previous (←)">←</button>
+
+        <div class="fc-counter">
+          <span id="fc-cur">1</span>
+          <span style="color:var(--muted);margin:0 4px">/</span>
+          <span id="fc-total">{{ cards|length }}</span>
+        </div>
+
+        <button class="ctrl-btn" id="next-btn" onclick="nextCard()" title="Next (→)">→</button>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="fc-actions">
+        <button class="btn btn-ghost" onclick="markCard('known')" id="btn-known" title="(K)">
+          ✓ Know it
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="markCard('review')" id="btn-review" title="(R)">
+          ↺ Review
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="shuffleCards()">⟳ Shuffle</button>
+      </div>
+    </div>
+
+    <!-- CARD GRID (all cards overview) -->
+    <div class="fc-grid-section">
+      <div class="section-header" style="margin-top:60px">
+        <div>
+          <div class="section-label">All Cards</div>
+          <div class="section-title">Quick Overview</div>
+        </div>
+      </div>
+      <div class="fc-grid" id="fc-grid">
+        {% for card in cards %}
+        <div class="fc-mini-card hover-lift {% if card.difficulty=='Easy' %}mini-easy{% elif card.difficulty=='Hard' %}mini-hard{% else %}mini-med{% endif %}"
+             onclick="jumpToCard({{ loop.index0 }})"
+             data-diff="{{ card.difficulty }}"
+             data-index="{{ loop.index0 }}">
+          <div class="mini-diff">{{ card.difficulty }}</div>
+          <div class="mini-topic">{{ card.topic }}</div>
+          <div class="mini-question">{{ card.question[:90] }}{% if card.question|length > 90 %}…{% endif %}</div>
+          <div class="mini-num">#{{ loop.index }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% else %}
+    <!-- EMPTY STATE -->
+    <div class="empty-state">
+      <div class="empty-icon">🃏</div>
+      <div class="empty-title">No flashcards yet</div>
+      <div class="empty-sub">Upload a document to generate your first AI-powered flashcard deck.</div>
+      <a href="/" class="btn btn-primary">Upload Document →</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ─── FLASHCARD PAGE ─────────────────────────────────────── */
+.fc-page { padding: 40px 0 100px; }
+.fc-topbar { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:32px; flex-wrap:wrap; gap:16px; }
+.count-chip { padding:2px 8px; border-radius:5px; background:var(--glass2); font-size:11px; font-weight:700; margin-left:4px; }
+
+/* STAGE */
+.fc-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  max-width: 680px; margin: 0 auto;
+}
+.card-stack { position:relative; width:100%; }
+.card-stack::before, .card-stack::after {
+  content:''; position:absolute; inset:0; border-radius:22px;
+  background:var(--card); border:1px solid var(--border); pointer-events:none;
+}
+.card-stack::before { transform:translateY(8px) translateX(-4px) scale(0.97); z-index:-1; opacity:0.5; }
+.card-stack::after  { transform:translateY(16px) translateX(-8px) scale(0.94); z-index:-2; opacity:0.3; }
+
+/* CARD FACES */
+.diff-chip {
+  position:absolute; top:20px; right:20px;
+  padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700;
+}
+.diff-easy   { background:rgba(34,197,94,0.1);  border:1px solid rgba(34,197,94,0.3);  color:var(--green); }
+.diff-medium { background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:var(--amber); }
+.diff-hard   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--red); }
+
+.topic-chip {
+  position:absolute; top:20px; left:20px;
+  padding:5px 12px; border-radius:8px; font-size:11px; font-weight:700;
+  background:var(--glass2); border:1px solid var(--border); color:var(--muted2);
+  max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+.fc-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:100px; font-size:12px; font-weight:700;
+  letter-spacing:0.5px; text-transform:uppercase; margin-bottom:18px;
+}
+.fc-tag-q { background:rgba(0,212,255,0.1);  border:1px solid rgba(0,212,255,0.25); color:var(--cyan); }
+.fc-tag-a { background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); color:var(--purple); }
+
+.fc-question { font-size:22px; font-weight:700; line-height:1.45; letter-spacing:-0.3px; margin-bottom:20px; text-align: center; }
+.fc-hint     {
+  font-size:14px; color:var(--muted2);
+  background:rgba(255,255,255,0.04); padding:11px 18px;
+  border-radius:10px; border:1px solid var(--border);
+  max-width:480px; line-height:1.5; text-align: center;
+}
+.fc-flip-cue { position:absolute; bottom:20px; font-size:12px; color:var(--muted); }
+.fc-answer  { font-size:19px; font-weight:600; line-height:1.5; letter-spacing:-0.2px; margin-bottom:18px; text-align: center; }
+.fc-example {
+  font-size:13px; color:var(--muted2); font-style:italic;
+  border-left:3px solid var(--purple); padding:8px 14px;
+  text-align:left; max-width:480px; line-height:1.6;
+  background:rgba(168,85,247,0.04); border-radius:0 8px 8px 0;
+}
+
+/* CONTROLS */
+.fc-kbd-hint { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:center; }
+kbd { padding:3px 8px; border-radius:5px; background:var(--glass2); border:1px solid var(--border); font-size:11px; font-family:var(--font); }
+.fc-controls { display:flex; align-items:center; gap:24px; }
+.ctrl-btn {
+  width:48px; height:48px; border-radius:12px;
+  background:var(--glass); border:1px solid var(--border);
+  color:var(--text); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s; backdrop-filter:blur(10px);
+}
+.ctrl-btn:hover { background:var(--glass2); border-color:rgba(0,212,255,0.3); transform:scale(1.05); }
+.fc-counter { font-size:17px; font-weight:700; min-width:64px; text-align:center; color:var(--muted2); }
+#fc-cur { font-size:26px; color:var(--text); }
+.fc-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+/* MINI CARD GRID */
+.fc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+.fc-mini-card {
+  border-radius:14px; padding:16px; cursor:pointer;
+  border:1px solid var(--border); background:var(--card);
+  transition:all 0.2s;
+}
+.fc-mini-card:hover { border-color:rgba(0,212,255,0.3); background:var(--glass2); }
+.fc-mini-card.active-card { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,212,255,0.2); }
+.fc-mini-card.mini-easy { border-left:3px solid var(--green); }
+.fc-mini-card.mini-med  { border-left:3px solid var(--amber); }
+.fc-mini-card.mini-hard { border-left:3px solid var(--red); }
+.mini-diff    { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; color:var(--muted); }
+.mini-topic   { font-size:12px; font-weight:600; color:var(--cyan); margin-bottom:6px; }
+.mini-question{ font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:8px; }
+.mini-num     { font-size:11px; color:var(--muted); font-weight:700; }
+
+@media(max-width:640px){ .flashcard-inner{height:300px} .fc-question{font-size:18px} }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- CARD DATA (passed from Flask) -->
+<script>
+const CARDS = {{ cards | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/flashcards.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}IntelliCard AI — Smart Flashcards{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}"/>
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+<!-- ANIMATED BACKGROUND -->
+<div class="bg-canvas">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="orb orb-4"></div>
+  <div class="grid-lines"></div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <div class="nav-logo-icon">⚡</div>
+        <span>IntelliCard</span>
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a>
+        {% if current_user.is_authenticated %}
+          <a href="/dashboard" class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+          <a href="/flashcards" class="nav-link {% if request.path.startswith('/flashcards') %}active{% endif %}">Flashcards</a>
+          <a href="/quiz" class="nav-link {% if request.path.startswith('/quiz') %}active{% endif %}">Quiz</a>
+        {% endif %}
+      </div>
+      <div class="nav-actions">
+        {% if current_user.is_authenticated %}
+          <a href="/dashboard" class="btn btn-ghost btn-sm">Dashboard</a>
+          <a href="/logout" class="btn btn-ghost btn-sm">Sign Out</a>
+        {% else %}
+          <a href="/login" class="btn btn-ghost btn-sm">Sign In</a>
+          <a href="/signup" class="btn btn-primary btn-sm">Get Started →</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+{% block content %}{% endblock %}
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="nav-logo" style="margin-bottom:12px;display:inline-flex">
+          <div class="nav-logo-icon" style="width:32px;height:32px;font-size:16px">⚡</div>
+          <span style="font-size:18px">IntelliCard</span>
+        </a>
+        <p style="font-size:13px;color:var(--muted);max-width:240px;line-height:1.6">AI-powered flashcard generation for modern learners.</p>
+      </div>
+      <div class="footer-links">
+        {% if current_user.is_authenticated %}
+          <a href="/dashboard" class="footer-link">Dashboard</a>
+          <a href="/flashcards" class="footer-link">Flashcards</a>
+          <a href="/quiz" class="footer-link">Quiz</a>
+        {% endif %}
+        <a href="/login" class="footer-link">Sign In</a>
+        <a href="/signup" class="footer-link">Sign Up</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Built with Flask · Groq · PyMuPDF · SQLite · Chart.js</p>
+    </div>
+  </div>
+</footer>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- SCRIPTS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function(){
+        {% for cat, msg in messages %}
+          showToast('{{ msg }}', '{{ cat if cat != "message" else "info" }}');
+        {% endfor %}
+      });
+    </script>
+  {% endif %}
+{% endwith %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

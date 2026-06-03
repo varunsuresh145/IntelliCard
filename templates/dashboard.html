@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — IntelliCard AI{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrap">
+  
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Main Menu</div>
+    <a href="/dashboard" class="sidebar-link active">
+      <span class="icon">📊</span> Dashboard
+    </a>
+    <a href="/" class="sidebar-link">
+      <span class="icon">📤</span> Upload Document
+    </a>
+    
+    <div class="sidebar-divider"></div>
+    
+    <div class="sidebar-section-label">Your Decks</div>
+    <div style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+      {% if decks %}
+        {% for d in decks %}
+          <a href="/flashcards?deck={{ d.id }}" class="sidebar-link" style="font-size: 13px;">
+            <span class="icon">🃏</span> {{ d.name }}
+            <span class="count">{{ d.cards_count }}</span>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div style="padding: 10px 14px; font-size: 12px; color: var(--muted);">No decks yet</div>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-divider" style="margin-top: auto;"></div>
+    
+    <div style="padding: 12px; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid var(--border);">
+      <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--cyan), var(--purple)); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px;">
+        {{ current_user.email[0].upper() if current_user.email else 'U' }}
+      </div>
+      <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+        <div style="font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis;">{{ current_user.email }}</div>
+        <div style="font-size: 11px; color: var(--muted2);">Student</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- DASHBOARD MAIN -->
+  <main class="dash-main">
+    
+    <!-- TOP SECTION -->
+    <div class="section-header" style="align-items: center;">
+      <div>
+        <div class="section-label">Study Panel</div>
+        <h1 class="section-title">Welcome back, <span class="grad-text">Learner</span></h1>
+      </div>
+      <a href="/" class="btn btn-primary btn-sm glow-pulse">✦ Create New Deck</a>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card accent-cyan">
+        <div class="stat-label">Total Cards</div>
+        <div class="stat-value cyan">{{ stats.total_cards }}</div>
+        <div class="stat-change neutral">Across {{ decks|length }} decks</div>
+      </div>
+      <div class="stat-card accent-purple">
+        <div class="stat-label">Decks</div>
+        <div class="stat-value purple">{{ decks|length }}</div>
+        <div class="stat-change neutral">Study decks active</div>
+      </div>
+    </div>
+
+
+
+    <!-- WEAK TOPICS SECTION -->
+    <div style="margin-top: 40px; margin-bottom: 40px;">
+      <div class="section-header" style="margin-bottom: 20px;">
+        <div>
+          <div class="section-label">Diagnostics</div>
+          <h2 style="font-family: var(--font-disp); font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Topic Analysis</h2>
+        </div>
+      </div>
+
+      {% if stats.weak_topics %}
+        <div class="weak-grid">
+          {% for wt in stats.weak_topics %}
+            <div class="weak-card {{ wt.status_class }} hover-lift">
+              <div class="weak-level {{ wt.status_class }}">{{ wt.status_text }}</div>
+              <div class="weak-name">{{ wt.topic }}</div>
+              <div class="weak-pct">Accuracy: {{ wt.pct }}% ({{ wt.known_count }} / {{ wt.total_count }} mastered)</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="glass-card" style="padding: 24px; text-align: center; color: var(--muted2); font-size: 14px;">
+          🎉 All your studied topics are looking solid! Keep it up.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- DECKS LIST SECTION -->
+    <div style="margin-top: 40px;">
+      <div class="section-header" style="margin-bottom: 20px;">
+        <div>
+          <div class="section-label">Flashcard Library</div>
+          <h2 style="font-family: var(--font-disp); font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">Your Study Decks</h2>
+        </div>
+      </div>
+
+      {% if decks %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+          {% for d in decks %}
+            <div class="glass-card hover-lift" style="padding: 24px; position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <span class="badge badge-cyan">{{ d.cards_count }} Flashcards</span>
+                <span style="font-size: 11px; color: var(--muted);">Created {{ d.created_at.strftime('%Y-%m-%d') }}</span>
+              </div>
+              <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px; font-family: var(--font-disp); letter-spacing:-0.3px;">{{ d.name }}</h3>
+              <p style="font-size: 13px; color: var(--muted2); margin-bottom: 20px; line-height: 1.5;">
+                Study cards, practice with adaptive spacing, or test your comprehension with a quiz.
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="/flashcards?deck={{ d.id }}" class="btn btn-ghost btn-sm" style="flex: 1; text-align: center; justify-content: center;">📖 Study</a>
+                <a href="/quiz?deck={{ d.id }}" class="btn btn-primary btn-sm" style="flex: 1; text-align: center; justify-content: center; box-shadow: none;">🎯 Quiz</a>
+                <form action="/deck/{{ d.id }}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this deck?');" style="display: inline-block;">
+                  <button type="submit" class="btn btn-danger btn-sm" style="padding: 8px 12px;" title="Delete Deck">🗑️</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state glass-card">
+          <div class="empty-icon">📂</div>
+          <div class="empty-title">Your library is empty</div>
+          <div class="empty-sub">Upload a PDF, DOCX, or text file to create your first smart flashcard deck.</div>
+          <a href="/" class="btn btn-primary">✦ Upload Document</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Pass weekly review activity from Flask
+const activityLabels = {{ stats.activity_data.labels | tojson | safe }};
+const activityCounts = {{ stats.activity_data.counts | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
